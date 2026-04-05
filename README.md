@@ -1,69 +1,87 @@
-![Python](https://img.shields.io/badge/Python-3.10-blue)
-![ML](https://img.shields.io/badge/Machine%20Learning-Model-green)
-![Streamlit](https://img.shields.io/badge/Streamlit-App-red)
-# ❤️ Heart Disease Prediction App
+# Heart Disease Prediction System
 
-🚀 A Machine Learning web application that predicts the likelihood of heart disease based on clinical parameters.
+## Overview
 
----
+This project implements a machine learning–based system for predicting the likelihood of heart disease using clinical attributes. The application is deployed as an interactive web interface, enabling real-time inference based on patient input parameters.
 
-## 🌐 Live Demo
-🔗 https://heart-disease-app-7fkabuvcjgmssw5ccxdtxs.streamlit.app
+The objective is to support early risk identification by leveraging supervised learning techniques and interpretable feature analysis.
 
 ---
 
-## 📌 Features
+## Live Application
 
-- ✅ Predict heart disease risk in real-time  
-- 📊 Random Forest model for accurate predictions  
-- 🧠 Feature importance visualization  
-- ⚙️ Threshold tuning (0.4 for better recall)  
-- 💻 Interactive UI using Streamlit  
+https://heart-disease-app-7fkabuvcjgmssw5ccxdtxs.streamlit.app
 
 ---
 
-## 🧠 Machine Learning Model
+## Methodology
 
-- Algorithm: **Random Forest Classifier**
-- Accuracy: **~88%**
-- Optimization: **Threshold tuning to reduce false negatives**
+### Data Processing
 
----
+* Categorical feature encoding using one-hot encoding
+* Feature scaling using StandardScaler
+* Consistent preprocessing pipeline applied during both training and inference
 
-## 📊 Important Features
+### Model Development
 
-- ST_Slope  
-- MaxHR  
-- Oldpeak  
-- Cholesterol  
-- Exercise Angina  
+* Baseline model: Logistic Regression
+* Final model: Random Forest Classifier
+* Evaluation metrics: Accuracy, Precision, Recall, F1-score
+* Performance: ~88% accuracy on test data
 
----
+### Optimization
 
-## 🛠️ Tech Stack
-
-- Python  
-- Scikit-learn  
-- Pandas, NumPy  
-- Matplotlib  
-- Streamlit  
+* Decision threshold adjusted from 0.5 to 0.4
+* Objective: reduce false negatives in a healthcare context
 
 ---
 
-## 📂 Project Structure
+## Features
+
+* Real-time prediction based on user input
+* Probability-based risk estimation
+* Feature importance visualization
+* Structured and interpretable input interface
+* Deployment via Streamlit
+
+---
+
+## Key Predictive Features
+
+* ST_Slope
+* Maximum Heart Rate (MaxHR)
+* Oldpeak (ST depression)
+* Exercise-Induced Angina
+* Cholesterol
+
+---
+
+## Technology Stack
+
+* Python
+* scikit-learn
+* pandas, numpy
+* matplotlib
+* Streamlit
+
+---
+
+## Project Structure
 
 ```
-├── app.py
-├── model.pkl
-├── scaler.pkl
-├── columns.pkl
-├── requirements.txt
-└── HeartFailure.ipynb
+app.py               # Streamlit application
+model.pkl            # Trained Random Forest model
+scaler.pkl           # Feature scaler
+columns.pkl          # Encoded feature schema
+requirements.txt     # Dependencies
+HeartFailure.ipynb   # Model development notebook
 ```
 
 ---
 
-## ⚙️ How to Run Locally
+## Reproducibility
+
+To run locally:
 
 ```bash
 git clone https://github.com/PranshuVyas22/heart-disease-app.git
@@ -74,21 +92,22 @@ streamlit run app.py
 
 ---
 
-## 🎯 Use Case
+## Use Cases
 
-This project can be used for:
-- Early detection of heart disease  
-- Clinical decision support  
-- Educational ML demonstrations  
-
----
-
-## 👨‍💻 Author
-
-**Pranshu Vyas**
+* Clinical risk screening (educational or experimental use)
+* Demonstration of end-to-end ML deployment
+* Feature importance analysis in tabular healthcare data
 
 ---
 
-## ⭐ If you like this project
+## Limitations
 
-Give it a ⭐ on GitHub!
+* Model trained on a specific dataset; may not generalize universally
+* Not intended for clinical decision-making without validation
+* Performance dependent on input data distribution
+
+---
+
+## Author
+
+Pranshu Vyas
