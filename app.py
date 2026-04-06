@@ -1,72 +1,155 @@
 import streamlit as st
 import pickle
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import numpy as np
+import sqlite3
+from datetime import datetime
 
-# Load files
+# ---------------- LOAD MODEL ----------------
 model = pickle.load(open("model.pkl", "rb"))
 scaler = pickle.load(open("scaler.pkl", "rb"))
 columns = pickle.load(open("columns.pkl", "rb"))
 
-st.set_page_config(page_title="Heart Disease Predictor", layout="centered")
+# ---------------- DATABASE ----------------
+conn = sqlite3.connect("users.db", check_same_thread=False)
+c = conn.cursor()
 
-st.title("❤️ Heart Disease Prediction App")
-st.markdown("### Predict risk based on clinical parameters")
+c.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    username TEXT PRIMARY KEY,
+    password TEXT
+)
+""")
 
-# -------------------------
-# 📘 Feature Descriptions
-# -------------------------
-with st.expander("ℹ️ Feature Descriptions"):
-    st.markdown("""
-    - **Age**: Age of the patient (years)  
-    - **Sex**: Male (M) or Female (F)  
-    - **Chest Pain Type**:
-        - ATA: Atypical Angina  
-        - NAP: Non-Anginal Pain  
-        - ASY: Asymptomatic  
-        - TA: Typical Angina  
-    - **RestingBP**: Resting blood pressure (mm Hg)  
-    - **Cholesterol**: Serum cholesterol (mg/dl)  
-    - **FastingBS**: Fasting blood sugar > 120 mg/dl (1 = true, 0 = false)  
-    - **RestingECG**:
-        - Normal  
-        - ST: ST-T wave abnormality  
-        - LVH: Left ventricular hypertrophy  
-    - **MaxHR**: Maximum heart rate achieved  
-    - **ExerciseAngina**: Exercise-induced angina (Y/N)  
-    - **Oldpeak**: ST depression induced by exercise  
-    - **ST_Slope**:
-        - Up: Upsloping (better condition)  
-        - Flat: Flat (moderate risk)  
-        - Down: Downsloping (high risk)  
-    """)
+c.execute("""
+CREATE TABLE IF NOT EXISTS history (
+    username TEXT,
+    age INTEGER,
+    probability REAL,
+    timestamp TEXT
+)
+""")
 
-# -------------------------
-# 🧾 Input Section
-# -------------------------
-st.subheader("Enter Patient Details")
+conn.commit()
+
+# ---------------- LOGIN SYSTEM ----------------
+st.sidebar.title("User Authentication")
+
+menu = ["Login", "Register"]
+choice = st.sidebar.selectbox("Menu", menu)
+
+username = st.sidebar.text_input("Username")
+password = st.sidebar.text_input("Password", type="password")
+
+if choice == "Register":
+    if st.sidebar.button("Register"):
+        try:
+            c.execute("INSERT INTO users VALUES (?, ?)", (username, password))
+            conn.commit()
+            st.sidebar.success("User created successfully!")
+        except:
+            st.sidebar.error("Username already exists")
+
+if choice == "Login":
+    if st.sidebar.button("Login"):
+        c.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
+        data = c.fetchone()
+
+        if data:
+            st.session_state["user"] = username
+            st.sidebar.success("Logged in successfully!")
+        else:
+            st.sidebar.error("Invalid credentials")
+
+# ---------------- PROTECT APP ----------------
+if "user" not in st.session_state:
+    st.warning("Please login to access the app")
+    st.stop()
+
+current_user = st.session_state["user"]
+
+# ---------------- UI ----------------
+st.title("❤️ Heart Health Risk Checker")
+st.markdown("### Predict your heart disease risk easily")
+
+st.info(f"Logged in as: {current_user}")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    age = st.slider("Age", 20, 80, 40)
-    sex = st.selectbox("Sex", ["M", "F"])
-    chest_pain = st.selectbox("Chest Pain Type", ["ATA", "NAP", "ASY", "TA"])
-    restingBP = st.number_input("Resting Blood Pressure", 80, 200, 120)
-    cholesterol = st.number_input("Cholesterol", 100, 400, 200)
-    fastingBS = st.selectbox("Fasting Blood Sugar > 120", [0, 1])
+    age = st.slider("Age (years)", 20, 80, 40)
+
+    sex = st.selectbox("Gender", ["Male", "Female"])
+
+    chest_pain = st.selectbox(
+        "Type of chest pain",
+        [
+            "Mild discomfort (ATA)",
+            "Non-heart pain (NAP)",
+            "No symptoms but risk (ASY)",
+            "Severe chest pain (TA)"
+        ]
+    )
+
+    restingBP = st.number_input("Resting blood pressure", 80, 200, 120)
+
+    cholesterol = st.number_input("Cholesterol level", 100, 400, 200)
+
+    fastingBS = st.selectbox("High blood sugar?", ["No", "Yes"])
 
 with col2:
-    restingECG = st.selectbox("Resting ECG", ["Normal", "ST", "LVH"])
-    maxHR = st.number_input("Max Heart Rate", 60, 220, 150)
-    exercise_angina = st.selectbox("Exercise Angina", ["Y", "N"])
-    oldpeak = st.number_input("Oldpeak", 0.0, 6.0, 1.0)
-    st_slope = st.selectbox("ST Slope", ["Up", "Flat", "Down"])
+    restingECG = st.selectbox(
+        "ECG result",
+        ["Normal", "ST abnormality", "LVH"]
+    )
 
-# -------------------------
-# 🔄 Preprocessing
-# -------------------------
+    maxHR = st.number_input("Maximum heart rate", 60, 220, 150)
+
+    exercise_angina = st.selectbox(
+        "Chest pain during exercise?",
+        ["No", "Yes"]
+    )
+
+    oldpeak = st.number_input(
+        "Exercise discomfort level (0 = none)",
+        0.0, 6.0, 1.0
+    )
+
+    st_slope = st.selectbox(
+        "Heart response during exercise",
+        ["Normal (Up)", "Flat (Risk)", "Down (High Risk)"]
+    )
+
+# ---------------- CONVERT VALUES ----------------
+sex = "M" if sex == "Male" else "F"
+
+chest_map = {
+    "Mild discomfort (ATA)": "ATA",
+    "Non-heart pain (NAP)": "NAP",
+    "No symptoms but risk (ASY)": "ASY",
+    "Severe chest pain (TA)": "TA"
+}
+chest_pain = chest_map[chest_pain]
+
+fastingBS = 1 if fastingBS == "Yes" else 0
+
+ecg_map = {
+    "Normal": "Normal",
+    "ST abnormality": "ST",
+    "LVH": "LVH"
+}
+restingECG = ecg_map[restingECG]
+
+exercise_angina = "Y" if exercise_angina == "Yes" else "N"
+
+slope_map = {
+    "Normal (Up)": "Up",
+    "Flat (Risk)": "Flat",
+    "Down (High Risk)": "Down"
+}
+st_slope = slope_map[st_slope]
+
+# ---------------- PREPROCESS ----------------
 input_data = {
     "Age": age,
     "Sex": sex,
@@ -91,31 +174,55 @@ for col in columns:
 input_df = input_df[columns]
 input_scaled = scaler.transform(input_df)
 
-# -------------------------
-# 🔮 Prediction
-# -------------------------
-if st.button("Predict"):
+# ---------------- PREDICTION ----------------
+if st.button("Check Heart Risk"):
     prob = model.predict_proba(input_scaled)[0][1]
 
-    st.subheader("Prediction Result")
+    # Save to database
+    c.execute(
+        "INSERT INTO history VALUES (?, ?, ?, ?)",
+        (current_user, age, float(prob), datetime.now().strftime("%Y-%m-%d %H:%M"))
+    )
+    conn.commit()
 
-    if prob > 0.4:
-        st.error(f"⚠️ High Risk of Heart Disease\n\nProbability: {prob:.2f}")
+    st.subheader("Result")
+
+    if prob < 0.3:
+        st.success(f"🟢 Low Risk (Probability: {prob:.2f})")
+
+    elif prob < 0.6:
+        st.warning(f"🟡 Moderate Risk (Probability: {prob:.2f})")
+
     else:
-        st.success(f"✅ Low Risk of Heart Disease\n\nProbability: {prob:.2f}")
+        st.error(f"🔴 High Risk (Probability: {prob:.2f})")
 
-# -------------------------
-# 📊 Feature Importance
-# -------------------------
-st.subheader("📊 Feature Importance")
+    st.progress(int(prob * 100))
 
-importances = model.feature_importances_
-feat_series = pd.Series(importances, index=columns)
+    # ---------------- SUGGESTIONS ----------------
+    st.subheader("💡 What Should You Do?")
 
-top_features = feat_series.sort_values(ascending=False).head(10)
+    if prob < 0.3:
+        st.info("Maintain healthy lifestyle and regular exercise.")
 
-fig, ax = plt.subplots()
-top_features.sort_values().plot(kind='barh', ax=ax)
-ax.set_title("Top 10 Important Features")
+    elif prob < 0.6:
+        st.warning("Improve diet, monitor BP, increase activity.")
 
-st.pyplot(fig)
+    else:
+        st.error("Consult a doctor immediately.")
+
+# ---------------- HISTORY ----------------
+st.subheader("📊 Your Risk History")
+
+c.execute("SELECT age, probability, timestamp FROM history WHERE username=?", (current_user,))
+data = c.fetchall()
+
+if data:
+    df = pd.DataFrame(data, columns=["Age", "Risk", "Time"])
+    st.dataframe(df)
+
+    st.line_chart(df["Risk"])
+else:
+    st.write("No history yet")
+
+# ---------------- DISCLAIMER ----------------
+st.caption("⚠️ This tool is for educational purposes only and not medical advice.")
